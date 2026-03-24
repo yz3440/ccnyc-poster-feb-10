@@ -1,0 +1,19 @@
+{
+  "name": "ccnyc-poster-feb-10",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:text": "vite --open /text.html",
+    "build": "vite build",
+    "preview": "vite preview",
+    "generate-manifest": "bun scripts/generate-manifest.js"
+  },
+  "dependencies": {
+    "p5": "^1.9.0",
+    "tweakpane": "^4.0.5"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

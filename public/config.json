@@ -1,0 +1,10 @@
+{
+  "crop": {
+    "top": 0.2,
+    "right": 0.1,
+    "bottom": 0.2,
+    "left": 0.1
+  },
+  "scale": 1.0,
+  "imageFolder": "pier_57_ortho_capture"
+}

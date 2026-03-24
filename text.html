@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CCNYC Text Animation</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: #000;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #999;
+      }
+
+      main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.25rem;
+        padding: 2rem 1rem;
+      }
+
+      nav {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 13px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      nav a {
+        color: #555;
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+
+      nav a:hover { color: #fff; }
+      nav a.active { color: #fff; }
+
+      .poster-container {
+        width: 1080px;
+        height: 1920px;
+        transform-origin: top center;
+        perspective: 1500px;
+        background: #000;
+      }
+
+      .poster-svg {
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      .poster-svg path {
+        transform-style: preserve-3d;
+        transform-origin: center center;
+        transform-box: fill-box;
+        animation: flipReturn 6s ease-in-out infinite;
+        animation-play-state: running;
+      }
+
+      @keyframes flipReturn {
+        0% { transform: rotateY(0deg); }
+        30% { transform: rotateY(0deg); }
+        45% { transform: rotateY(180deg); }
+        60% { transform: rotateY(360deg); }
+        100% { transform: rotateY(360deg); }
+      }
+
+      footer {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav>
+        <a href="/">Poster</a>
+        <a href="/text.html" class="active">Text</a>
+      </nav>
+      <div class="poster-container" id="poster-container"></div>
+      <footer>CCNYC Feb 10 2026 &middot; CSS 3D Transforms &middot; 1080 &times; 1920</footer>
+    </main>
+
+    <script type="module">
+      import { Pane } from 'https://cdn.jsdelivr.net/npm/tweakpane@4/dist/tweakpane.min.js';
+
+      const PARAMS = {
+        duration: 6,
+        phaseMultiplier: 0.0005,
+        direction: 'diagonal',
+        reverse: false,
+        paused: false,
+      };
+
+      let paths = [];
+      let pathData = [];
+
+      async function loadSVG() {
+        const response = await fetch('/text-individual.svg');
+        const svgText = await response.text();
+
+        const container = document.getElementById('poster-container');
+        container.innerHTML = svgText;
+
+        const svg = container.querySelector('svg');
+        svg.classList.add('poster-svg');
+
+        paths = Array.from(svg.querySelectorAll('path'));
+
+        pathData = paths.map((path, index) => {
+          const bbox = path.getBBox();
+          return {
+            element: path,
+            centerX: bbox.x + bbox.width / 2,
+            centerY: bbox.y + bbox.height / 2,
+            width: bbox.width,
+            height: bbox.height,
+            index,
+          };
+        });
+
+        updateAnimationDelays();
+        scaleToFit();
+      }
+
+      function calculatePhaseOffset(data) {
+        const { centerX, centerY } = data;
+        const { phaseMultiplier, direction, reverse } = PARAMS;
+        const sign = reverse ? -1 : 1;
+
+        switch (direction) {
+          case 'horizontal': return centerX * phaseMultiplier * sign;
+          case 'vertical':   return centerY * phaseMultiplier * sign;
+          case 'radial': {
+            const dx = centerX - 540;
+            const dy = centerY - 960;
+            return Math.sqrt(dx * dx + dy * dy) * phaseMultiplier * 0.5 * sign;
+          }
+          case 'diagonal':
+          default:
+            return (centerX + centerY) * phaseMultiplier * sign;
+        }
+      }
+
+      function updateAnimationDelays() {
+        pathData.forEach(data => {
+          const delay = -calculatePhaseOffset(data) * PARAMS.duration;
+          data.element.style.animationDelay = `${delay}s`;
+          data.element.style.animationDuration = `${PARAMS.duration}s`;
+        });
+      }
+
+      function updatePlayState() {
+        const state = PARAMS.paused ? 'paused' : 'running';
+        paths.forEach(p => p.style.animationPlayState = state);
+      }
+
+      function scaleToFit() {
+        const container = document.getElementById('poster-container');
+        const maxHeight = window.innerHeight * 0.9;
+        container.style.transform = `scale(${Math.min(1, maxHeight / 1920)})`;
+      }
+
+      function setupTweakpane() {
+        const pane = new Pane({ title: 'Text Animation' });
+
+        pane.addBinding(PARAMS, 'duration', { min: 0.5, max: 10, step: 0.1, label: 'Duration (s)' })
+          .on('change', updateAnimationDelays);
+
+        pane.addBinding(PARAMS, 'phaseMultiplier', { min: 0, max: 0.01, step: 0.0001, label: 'Phase Spread' })
+          .on('change', updateAnimationDelays);
+
+        pane.addBinding(PARAMS, 'direction', {
+          options: { Diagonal: 'diagonal', Horizontal: 'horizontal', Vertical: 'vertical', Radial: 'radial' },
+          label: 'Direction',
+        }).on('change', updateAnimationDelays);
+
+        pane.addBinding(PARAMS, 'reverse', { label: 'Reverse' })
+          .on('change', updateAnimationDelays);
+
+        pane.addBinding(PARAMS, 'paused', { label: 'Paused' })
+          .on('change', updatePlayState);
+      }
+
+      window.addEventListener('resize', scaleToFit);
+      loadSVG().then(setupTweakpane);
+    </script>
+  </body>
+</html>
